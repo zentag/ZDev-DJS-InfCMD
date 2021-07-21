@@ -52,6 +52,12 @@ module.exports = (client, commandOptions, file, clientOptions) => {
     ownerOnly = false,
     testOnly = false,
     callback,
+    error = ({ message, error, errortype }) => {
+      if(errortype == "EXCEPTION"){
+        message.reply("An error has occured, and it has been reported to the developers")
+      }      
+      console.log(error)
+    },
   } = commandOptions
   let {
     prefix,
@@ -93,10 +99,23 @@ module.exports = (client, commandOptions, file, clientOptions) => {
         content.toLowerCase() === command
       ) {
         // A command has been ran
+        // Split on any number of spaces
+        const arguments = content.split(/[ ]+/)
 
+        // Remove the command which is the first index
+        arguments.shift()
         // Ensure the user has the required permissions
         for (const permission of permissions) {
           if (!member.hasPermission(permission)) {
+            const errorObj = {
+              message: message,
+              args: arguments,
+              text: arguments.join(' '),
+              client: client,
+              error: "User doesn't have correct Permissions",
+              errortype: "PERMISSION"
+            }
+            error(errorObj)
             message.reply(permissionError)
             return
           }
@@ -109,6 +128,15 @@ module.exports = (client, commandOptions, file, clientOptions) => {
           )
 
           if (!role || !member.roles.cache.has(role.id)) {
+            const errorObj = {
+              message: message,
+              args: arguments,
+              text: arguments.join(' '),
+              client: client,
+              error: "User doesn't have correct Roles",
+              errortype: "ROLE"
+            }
+            error(errorObj)
             message.reply(
               `You must have the "${requiredRole}" role to use this command.`
             )
@@ -116,11 +144,7 @@ module.exports = (client, commandOptions, file, clientOptions) => {
           }
         }
 
-        // Split on any number of spaces
-        const arguments = content.split(/[ ]+/)
-
-        // Remove the command which is the first index
-        arguments.shift()
+        
 
         // Ensure we have the correct number of arguments
         if (
@@ -138,8 +162,22 @@ module.exports = (client, commandOptions, file, clientOptions) => {
             text: arguments.join(' '),
             client: client
         }
+        
         // Handle the custom command code
-        callback(infoObj)
+        
+        try{
+          callback(infoObj)
+        } catch(e) {
+          const errorObj = {
+            message: message,
+            args: arguments,
+            text: arguments.join(' '),
+            client: client,
+            error: e,
+            errortype: "EXCEPTION"
+          }
+          error(errorObj)
+        }
 
         return
       }
