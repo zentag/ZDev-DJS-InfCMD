@@ -1,4 +1,5 @@
 # ZDev-DJS-InfCMD
 ## **Discord.js command handler.**
-**_Not recommended for use, made for Infinity, no support will be offered_**
+**_Not recommended for use, made for Infinity, no support will be offered_**  
+Inspired by [wokcommands](https://docs.wornoffkeys.com/) made by [Alexander Flores](https://github.com/AlexzanderFlores/). His youtube is [here](https://www.youtube.com/channel/UChPrh75CmPP9Ig6jISPnfNA)
 ### If you're dumb enough to use this, you'll have to figure out how by yourself!
