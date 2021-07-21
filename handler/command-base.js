@@ -69,13 +69,15 @@ module.exports = (client, commandOptions, file, clientOptions) => {
   } else {
     aliases.unshift(file.replace('.js', ''))
   }
+  if(ownerOnly == true && !(ownerId)) console.log(`InfCMD WARNING > Command ${aliases[0]} requires an Owner ID, but it is not defined in initiation`)
+  if(testOnly == true && !(testServers)) console.log(`InfCMD WARNING > Command ${aliases[0]} requires Test Servers, but it is not defined in initiation`)
   
   // Ensure the command and aliases are in an array
   if (typeof aliases === 'string') {
     aliases = [aliases]
   }
 
-  console.log(`InfCMD > Loaded command: "${aliases[0]}"`)
+  console.log(`InfCMD > Loaded Command: "${aliases[0]}"`)
 
   // Ensure the permissions are in an array and are all valid
   if (permissions.length) {
