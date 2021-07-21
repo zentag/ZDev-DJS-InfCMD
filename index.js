@@ -9,7 +9,9 @@ client.on('ready', async () => {
   init(client, {
       commandsDir: 'commands',
       featuresDir: 'features',
-      prefix: 'funny?'
+      prefix: 'funny?',
+      ownerId: '521115847801044993',
+      testServers: ['811390529728020480']
   })
 })
 

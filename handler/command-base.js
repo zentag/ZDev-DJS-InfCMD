@@ -49,10 +49,14 @@ module.exports = (client, commandOptions, file, clientOptions) => {
     maxArgs = null,
     permissions = [],
     requiredRoles = [],
+    ownerOnly = false,
+    testOnly = false,
     callback,
   } = commandOptions
   let {
-    prefix
+    prefix,
+    testServers,
+    ownerId,
   } = clientOptions
   if(!aliases){
     aliases = [file.replace('.js', '')]
@@ -79,7 +83,8 @@ module.exports = (client, commandOptions, file, clientOptions) => {
   // Listen for messages
   client.on('message', (message) => {
     const { member, content, guild } = message
-
+    if(testOnly == true && !(testServers.includes(message.guild.id))) return console.log("Test only")
+    if(ownerOnly == true && !(message.author.id == ownerId)) return console.log("Owner only")
     for (const alias of aliases) {
       const command = `${prefix}${alias.toLowerCase()}`
 
