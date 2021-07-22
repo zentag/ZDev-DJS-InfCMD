@@ -11,7 +11,8 @@ client.on('ready', async () => {
       featuresDir: 'features',
       prefix: 'funny?',
       ownerId: '521115847801044993',
-      testServers: ['811390529728020480']
+      testServers: ['811390529728020480'],
+      mongoURI: process.env.mongoPath,
   })
 })
 
