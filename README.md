@@ -11,6 +11,6 @@ Inspired by [wokcommands](https://docs.wornoffkeys.com/) made by [Alexander Flor
 - [x] Improve Command Base for custom prefixes
 - [x] Add configuration for mongoURI, disabled default commands
 - [x] Add readcommands method in infcmd.js
-- [ ] Add comments to help understand what things mean
+- [x] Add comments to help understand what things mean
 - [ ] Add docs??!??!?!?!
 - [ ] Maybe turn it in to an NPM package?
