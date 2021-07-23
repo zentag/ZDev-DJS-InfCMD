@@ -1,6 +1,5 @@
 module.exports = {
     aliases: ['addition'],
-    permissionError: 'You need admin permissions to run this command',
     expectedArgs: '<number> <number>',
     minArgs: 2,
     maxArgs: 2,
@@ -11,13 +10,11 @@ module.exports = {
       const num2 = +args[1]
       message.reply(`The sum is ${num1 + num2}`)
     },
-    error: ({ message, error, client, errortype }) => {
-      const me = client.users.cache.get('521115847801044993')
-      me.send("There was an error with the bot!")
-      if(errortype == "EXCEPTION"){
-        message.reply("An error has occured, and it has been reported to the developers")
-      } 
-      console.log(error)
+    error: ({ message, error, errortype, rr,  }) => {
+      if(errortype == "EXCEPTION") message.reply("An error has occured, and it has been reported to the developers")
+      else if(errortype == "ROLE") message.reply(`You must have the role "${rr}" to run this command`)
+      else if(errortype == "PERMISSION") message.reply(`You must have the permission "${permission}" to run this command`)
+      if(errortype == "EXCEPTION") console.log(error)
     },
     permissions: 'ADMINISTRATOR',
     requiredRoles: ["Funny"],
