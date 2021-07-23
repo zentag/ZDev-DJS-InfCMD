@@ -5,11 +5,13 @@ module.exports = {
     identifier: 0,
     permissions: ['ADMINISTRATOR'],
     callback: async ({ message, mongoURI, args, prefix }) => {
+        // get schema and guildid
         const settingsSchema = require('../schemas/settings.js')
         const guildId = message.guild.id
         if(args[0]){
             await mongo(mongoURI).then(async (mongoose) => {
                 try {
+                  // update db
                   const result = await settingsSchema.findOneAndUpdate(
                     {
                       guildId
@@ -26,11 +28,13 @@ module.exports = {
                     }
                   )
                 } finally {
-                  console.log("hell ya, mongo succeed")
+
                 }
               })
+            // reply
             message.channel.send(`Prefix has been set to ${args[0]}!`)
         } else {
+            // if no args, say prefix
             message.channel.send(`This guild's prefix is ${prefix}`);
         }
     }

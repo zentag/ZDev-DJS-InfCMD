@@ -13,9 +13,9 @@ module.exports = {
         let counter = 0
         let page = 0
         for (const command of commands) {
-            // Check for permissions
+            // desctructure stuff
             let { permissions, description, expectedArgs, aliases } = command
-
+            // check for permissions
             if (permissions) {
                 let hasPermission = true
                 if (typeof permissions === 'string') {
@@ -34,11 +34,12 @@ module.exports = {
                 }
             }
 
-            // Format embed fields
+            // format embed fields
             const mainCommand = command.aliases[0]
             let cmddescription = "This command has no description"
             if(counter % 5 == 0) page++
             counter++
+            // bunch of page logic -- skip to line 134
             if((!args[0] || args[0] == 1) && page == 1){
                 if(description) cmddescription = `Description: ${description}`
                 const save = aliases[0]
@@ -130,11 +131,15 @@ module.exports = {
                 embed.addField(`**${prefix}${mainCommand}**`, cmddescription)
             }
         }
+        // check if page exists
         if(args[0] && (args[0] > page || args[0] < 1)) return message.reply("Invalid page number!")
+        // set footer
         if(!args[0]) embed.setFooter(`Page 1/${page} | ${prefix}help <page>`)
         if(args[0]) embed.setFooter(`Page ${args[0]}/${page} | ${prefix}help <page>`)
+        // set title and description
         embed.setTitle(`Help Menu`)
         embed.setDescription("Find commands, aliases, and arguments here")
+        // send
         message.channel.send(embed)
     }
 }

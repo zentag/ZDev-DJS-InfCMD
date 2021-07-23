@@ -7,11 +7,14 @@ module.exports = {
     permissions: ['ADMINISTRATOR'],
     identifier: 1,
     callback: async ({ message, mongoURI, args, userCommands, prefix }) => {
+        // set guildid for mongo ease of use
         const guildId = message.guild.id
         if(args[0]) {
+            // check if it's a real command
             if(userCommands.includes(args[0])) {
                 await mongo(mongoURI).then(async (mongoose) => {
                     try {
+                    // update the db
                     const result = await settingsSchema.findOneAndUpdate(
                         {
                         guildId
@@ -28,14 +31,17 @@ module.exports = {
                         }
                     )
                     } finally {
-                    console.log("hell ya, mongo succeed")
+
                     }
                 })
+                // reply
                 message.reply(`Command ${args[0]} has been disabled on this server. To enable it, use ${prefix}enable-command <command>`)
             } else {
+                // not a real command
                 message.reply("Invalid command!")
             }
         } else {
+            // no args[0], no command specified
             message.reply("Looks like you didn't specify a command to disable! Please add a command to disable.")
         }
     }
