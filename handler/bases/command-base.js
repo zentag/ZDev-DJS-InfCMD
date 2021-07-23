@@ -1,5 +1,6 @@
 const mongo = require('../mongo.js')
 const settingsSchema = require('../schemas/settings.js')
+const prefixes = new Map()
 
 const validatePermissions = (permissions) => {
   const validPermissions = [
@@ -77,7 +78,22 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     aliases.unshift(file.replace('.js', ''))
   }
   
-
+  if(mongoURI){
+    await mongo(mongoURI).then(async (mongoose) => {
+      settingsSchema.find({}, function (err, docs) {
+          if (err){
+              console.log(err)
+          }
+          else{
+            docs.map(doc => {
+              if(doc.prefix){
+                prefixes.set(doc.guildId, doc.prefix)
+              }
+            })
+          }
+      });
+    });
+  }
   
   if(ownerOnly == true && !(ownerId)) console.log(`InfCMD WARNING > Command ${aliases[0]} requires an Owner ID, but it is not defined in initiation`)
   if(testOnly == true && !(testServers)) console.log(`InfCMD WARNING > Command ${aliases[0]} requires Test Servers, but it is not defined in initiation`)
@@ -102,45 +118,50 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
 
   // Listen for messages
   client.on('message', async (message) => {
-    let different = false
     let disabledCommands = null
-    await mongo(mongoURI).then(async (mongoose) => {
-      const result = settingsSchema.findOne({ guildId: message.guild.id }, function (err, docs) {
-          if (err){
-              console.log(err)
-          }
-          else{
-              if(!docs) return
-              if(docs.disabledCommands.length > 0){
-                disabledCommands = docs.disabledCommands
-                if(disabledCommands !== null && disabledCommands.includes(aliases[0])) return
-              }
-              if(prefix !== docs.prefix){
-                different = true
-              } else {
+    if(mongoURI){
+      await mongo(mongoURI).then(async (mongoose) => {
+        const result = settingsSchema.findOne({ guildId: message.guild.id }, function (err, docs) {
+            if (err){
+                console.log(err)
+            }
+            else{
+                if(!docs) return prefixes.set(message.guild.id, prefix)
+                if(docs.disabledCommands.length > 0){
+                  disabledCommands = docs.disabledCommands
+                  if(disabledCommands !== null && disabledCommands.includes(aliases[0])) return
+                }
+                if(prefix == docs.prefix) return
+                if(docs.prefix){
+                  if(prefixes.get(message.guild.id) && prefixes.get(message.guild.id) == docs.prefix) return
+                  prefixes.set(message.guild.id, docs.prefix);
+                }
                 return
-              }
-              if(docs.prefix){
-                prefix = docs.prefix;
-              }
-              return
-          }
+            }
+        });
       });
-    });
+    } else {
+      prefixes.set(message.guild.id, prefix)
+    }
     if(ignoreBots == true && message.author.bot) return
     const { member, content, guild } = message
     if(testOnly == true && !(testServers.includes(message.guild.id))) return 
     if(ownerOnly == true && !(message.author.id == ownerId)) return 
     for (const alias of aliases) {
-      const command = `${prefix}${alias.toLowerCase()}`
+      const command = `${prefixes.get(message.guild.id) || prefix}${alias.toLowerCase()}`
 
       if (
         content.toLowerCase().startsWith(`${command} `) ||
-        content.toLowerCase() === command
+        content.toLowerCase() === command ||
+        content.toLowerCase().startsWith(`<@!${client.user.id}> ${alias}`)
       ) {
+        if(disabledDefaults !== null && (content.toLowerCase().startsWith(`<@!${client.user.id}> ${alias}`)) && disabledDefaults.includes('mention-prefix')) return
         // A command has been ran
         // Split on any number of spaces
         const arguments = content.split(/[ ]+/)
+        if(
+          content.toLowerCase().startsWith(`<@!${client.user.id}> ${alias}`)
+        ) arguments.shift()
 
         // Remove the command which is the first index
         arguments.shift()
@@ -202,7 +223,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
             args: arguments,
             text: arguments.join(' '),
             client: client,
-            prefix: prefix,
+            prefix: prefixes.get(message.guild.id),
             mongoURI: mongoURI,
             userCommands: userCommands,
           }
@@ -228,11 +249,10 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
             args: arguments,
             text: arguments.join(' '),
             client: client,
-            prefix: prefix,
+            prefix: prefixes.get(message.guild.id),
           }
           
           // Handle the custom command code
-          if(different == true) return message.reply("Sorry, but you'll have to send the command again! It should work next time.")
           try{
             callback(infoObj)
           } catch(e) {

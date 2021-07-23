@@ -130,6 +130,7 @@ module.exports = {
                 embed.addField(`**${prefix}${mainCommand}**`, cmddescription)
             }
         }
+        if(args[0] && (args[0] > page || args[0] < 1)) return message.reply("Invalid page number!")
         if(!args[0]) embed.setFooter(`Page 1/${page} | ${prefix}help <page>`)
         if(args[0]) embed.setFooter(`Page ${args[0]}/${page} | ${prefix}help <page>`)
         embed.setTitle(`Help Menu`)
