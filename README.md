@@ -7,7 +7,8 @@ Inspired by [wokcommands](https://docs.wornoffkeys.com/) made by [Alexander Flor
 - [x] Create prefix default command
 - [x] Create enable/disable default commands
 - [x] Create help default command
-- [ ] Improve help default command
+- [ ] Improve messiness of help command
+- [x] Improve Command Base for custom prefixes
 - [x] Add configuration for mongoURI, disabled default commands
 - [x] Add readcommands method in infcmd.js
 - [ ] Add comments to help understand what things mean
