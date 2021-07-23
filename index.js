@@ -5,7 +5,7 @@ require('dotenv').config()
 
 client.on('ready', async () => {
   console.log('The client is ready!')
-
+  
   init(client, {
       commandsDir: 'commands',
       featuresDir: 'features',
