@@ -46,6 +46,13 @@ const validatePermissions = (permissions) => {
 }
 
 module.exports = async (client, commandOptions, file, clientOptions, userCommands) => {
+  // define the default error
+  const _defaultError = ({ message, error, errortype, rr, permission }) => {
+    if(errortype == "EXCEPTION") message.reply("An error has occured, and it has been reported to the developers")
+    else if(errortype == "ROLE") message.reply(`You must have the role "${rr}" to run this command`)
+    else if(errortype == "PERMISSION") message.reply(`You must have the permission "${permission}" to run this command`)
+    if(errortype == "EXCEPTION") console.log(error)
+  }
   // deconstruct stuff from commands
   let {
     aliases,
@@ -58,7 +65,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     ownerOnly = false,
     testOnly = false,
     callback,
-    error = ({ message, error, errortype, rr,  }) => {
+    error = ({ message, error, errortype, rr, permission }) => {
       if(errortype == "EXCEPTION") message.reply("An error has occured, and it has been reported to the developers")
       else if(errortype == "ROLE") message.reply(`You must have the role "${rr}" to run this command`)
       else if(errortype == "PERMISSION") message.reply(`You must have the permission "${permission}" to run this command`)
@@ -70,9 +77,10 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     prefix,
     testServers,
     ownerId,
-    mongoURI,
+    mongoURI = null,
     ignoreBots = false,
     disabledDefaults = null,
+    defaultError = null,
   } = clientOptions
   // add the file name to aliases
   if(!aliases){
@@ -110,7 +118,8 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
   if(identifier !== null) console.log(`InfCMD > Loaded Default Command: "${aliases[0]}"`)
   else console.log(`InfCMD > Loaded Command: "${aliases[0]}"`)
   
-
+  // check for defaultError and set it
+  if(defaultError !== null && error == _defaultError) error = defaultError
   // check that permissions are still valid
   if (permissions.length) {
     if (typeof permissions === 'string') {
@@ -122,11 +131,11 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
 
   // make listener for messages
   client.on('message', async (message) => {
-    if(message.channel.type == "dm") return
+
     // set disabled to null every message
     let disabledCommands = null
     // check db
-    if(mongoURI){
+    if(mongoURI && message.guild !== null){
       await mongo(mongoURI).then(async (mongoose) => {
         const result = settingsSchema.findOne({ guildId: message.guild.id }, function (err, docs) {
             if (err){
@@ -151,7 +160,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
             }
         });
       });
-    } else {
+    } else if(message.guild !== null){
       // if no mongoURI set the default prefix
       prefixes.set(message.guild.id, prefix)
     }
@@ -165,7 +174,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     // check each alias for the command
     for (const alias of aliases) {
       // register command template
-      const command = `${prefixes.get(message.guild.id) || prefix}${alias.toLowerCase()}`
+      const command = `${message.guild ? prefixes.get(message.guild.id) : prefix || prefix}${alias.toLowerCase()}`
       // see if the command was called
       if (
         content.toLowerCase().startsWith(`${command} `) ||
@@ -186,7 +195,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
         arguments.shift()
         // check for required permissions
         for (const permission of permissions) {
-          if (!member.hasPermission(permission)) {
+          if ((member !== null && !member.hasPermission(permission)) || member == null) {
             const errorObj = {
               message: message,
               args: arguments,
@@ -197,7 +206,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
               errortype: "PERMISSION"
             }
             error(errorObj)
-            return
+            return;
           }
         }
 
@@ -228,7 +237,8 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
         // check for args length
         if (
           arguments.length < minArgs ||
-          (maxArgs !== null && arguments.length > maxArgs)
+          (maxArgs !== null && arguments.length > maxArgs) &&
+          maxArgs !== -1
         ) {
           message.reply(
             `Incorrect syntax! Use ${prefix}${alias} ${expectedArgs}`
@@ -242,7 +252,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
             args: arguments,
             text: arguments.join(' '),
             client: client,
-            prefix: prefixes.get(message.guild.id),
+            prefix: message.guild ? prefixes.get(message.guild.id) : prefix,
             mongoURI: mongoURI,
             userCommands: userCommands,
           }
@@ -282,6 +292,10 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
               text: arguments.join(' '),
               client: client,
               error: e,
+              command: {
+                _aliases: aliases,
+                _name: aliases[0],
+              },
               errortype: "EXCEPTION"
             }
             error(errorObj)
