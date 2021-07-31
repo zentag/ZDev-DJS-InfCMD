@@ -1,5 +1,7 @@
 module.exports = {
     init: (client, clientOptions) => {
+        // set max listeners
+        client.setMaxListeners(100)
         // Variables
         let { 
             commandsDir,
@@ -83,19 +85,21 @@ module.exports = {
         const fs = require('fs')
         const commandsDir = 'commands'
         let userCommands = []
-        console.log("hi")
         const readCommands = (dir) => {
-            console.log("test -1")
             const __infcmdnewdirname = __dirname.replace("\handler", "")
             if(!(fs.existsSync(path.join(__infcmdnewdirname, commandsDir)))) return console.log("InfCMD > No commands directory")
             const files = fs.readdirSync(path.join(__infcmdnewdirname, commandsDir))
             for (const file of files) {
-                console.log("test");
                 const stat = fs.lstatSync(path.join(__infcmdnewdirname, commandsDir, file))
                 if (stat.isDirectory()) {
                     readCommands(path.join(commandsDir, file))
                 } else if (file !== commandBaseFile) {
-                    const option = require(path.join(__infcmdnewdirname, commandsDir, file))
+                    let option = require(path.join(__infcmdnewdirname, commandsDir, file))
+                    if(option.aliases == undefined) {
+                        option.aliases = [file.replace(".js", "")]
+                    } else if(option.aliases[0] !== file.replace(".js", "")){
+                        option.aliases.push(file.replace(".js", ""))
+                    }
                     userCommands.push(option)
                 }
             }
