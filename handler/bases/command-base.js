@@ -46,35 +46,22 @@ const validatePermissions = (permissions) => {
 }
 
 module.exports = async (client, commandOptions, file, clientOptions, userCommands) => {
-  // define the default error
-  const _defaultError = ({ message, error, errortype, rr, permission }) => {
-    if(errortype == "EXCEPTION") message.reply("An error has occured, and it has been reported to the developers")
-    else if(errortype == "ROLE") message.reply(`You must have the role "${rr}" to run this command`)
-    else if(errortype == "PERMISSION") message.reply(`You must have the permission "${permission}" to run this command`)
-    if(errortype == "EXCEPTION") console.log(error)
-  }
   // deconstruct stuff from commands
   let {
-    aliases,
+    callback,
+    buttons,
+    buttonList = [],
     identifier = null,
-    expectedArgs = '',
-    minArgs = 0,
-    maxArgs = null,
-    permissions = [],
-    requiredRoles = [],
+    name = null,
+    description = null,
     ownerOnly = false,
     testOnly = false,
-    callback,
-    error = ({ message, error, errortype, rr, permission }) => {
-      if(errortype == "EXCEPTION") message.reply("An error has occured, and it has been reported to the developers")
-      else if(errortype == "ROLE") message.reply(`You must have the role "${rr}" to run this command`)
-      else if(errortype == "PERMISSION") message.reply(`You must have the permission "${permission}" to run this command`)
-      if(errortype == "EXCEPTION") console.log(error)
-    },
+    permissions = [],
+    requiredRoles = [],
+    options = [],
   } = commandOptions
   // deconstruct stuff from client
   let {
-    prefix,
     testServers,
     ownerId,
     mongoURI = null,
@@ -82,44 +69,15 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     disabledDefaults = null,
     defaultError = null,
   } = clientOptions
-  // add the file name to aliases
-  if(!aliases){
-    aliases = [file.replace('.js', '')]
-  } else {
-    aliases.unshift(file.replace('.js', ''))
-  }
-  // set up prefixes
-  if(mongoURI){
-    await mongo(mongoURI).then(async (mongoose) => {
-      settingsSchema.find({}, function (err, docs) {
-          if (err){
-              console.log(err)
-          }
-          else{
-            docs.map(doc => {
-              if(doc.prefix){
-                prefixes.set(doc.guildId, doc.prefix)
-              }
-            })
-          }
-      });
-    });
-  }
+  if(name == null) return console.log(`InfCMD WARNING > Command ${file.replace(".js", "")} doesn't have required field "name"`)
+  if(description == null) return console.log(`InfCMD WARNING > Command ${file.replace(".js", "")} doesn't have required field "description"`)
   // check for owner and test commands without proper configuration
-  if(ownerOnly == true && !(ownerId)) console.log(`InfCMD WARNING > Command ${aliases[0]} requires an Owner ID, but it is not defined in initiation`)
-  if(testOnly == true && !(testServers)) console.log(`InfCMD WARNING > Command ${aliases[0]} requires Test Servers, but it is not defined in initiation`)
-  
-  // check if aliases is an array
-  if (typeof aliases === 'string') {
-    aliases = [aliases]
-  }
+  if(ownerOnly == true && !(ownerId)) console.log(`InfCMD WARNING > Command ${name} requires an Owner ID, but it is not defined in initiation`)
+  if(testOnly == true && !(testServers)) console.log(`InfCMD WARNING > Command ${name} requires Test Servers, but it is not defined in initiation`)
   // check for identifier(for default commands) and callback functions
-  if(!callback) return console.log(`InfCMD > Command ${aliases[0]} does not have a callback function`)
-  if(identifier !== null) console.log(`InfCMD > Loaded Default Command: "${aliases[0]}"`)
-  else console.log(`InfCMD > Loaded Command: "${aliases[0]}"`)
-  
-  // check for defaultError and set it
-  if(defaultError !== null && error == _defaultError) error = defaultError
+  if(!callback) return console.log(`InfCMD > Command ${name} does not have a callback function`)
+  if(identifier !== null) console.log(`InfCMD > Loaded Default Command: "${name}"`)
+  else console.log(`InfCMD > Loaded Command: "${name}"`)
   // check that permissions are still valid
   if (permissions.length) {
     if (typeof permissions === 'string') {
@@ -129,9 +87,22 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     validatePermissions(permissions)
   }
 
+  const testguild = client.guilds.cache.get('811390529728020480');
+  const data = {
+      name,
+      description,
+      options
+  }
+  
+  const command = await testguild.commands.create(data)
   // make listener for messages
-  client.on('message', async (message) => {
-
+  client.on('interactionCreate', async (interaction) => {
+    const passthroughObj = {
+      interaction,
+      client
+    }
+    if(interaction.isButton() && buttons && buttonList !== [] && buttonList.includes(interaction.customId)) buttons(passthroughObj)
+    if(!interaction.isCommand()) return
     // set disabled to null every message
     let disabledCommands = null
     // check db
@@ -142,57 +113,25 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
                 console.log(err)
             }
             else{
-                // if there's no document, set prefix to default
-                if(!docs) return prefixes.set(message.guild.id, prefix)
+                if(!docs) return
                 // disable the needed commands (per server)
                 if(docs.disabledCommands.length > 0){
                   disabledCommands = docs.disabledCommands
-                  if(disabledCommands !== null && disabledCommands.includes(aliases[0])) return
-                }
-                // return if same prefix
-                if(prefix == docs.prefix) return
-                // if prefix, and it's not the same, set it to the correct prefix
-                if(docs.prefix){
-                  if(prefixes.get(message.guild.id) && prefixes.get(message.guild.id) == docs.prefix) return
-                  prefixes.set(message.guild.id, docs.prefix);
+                  if(disabledCommands !== null && disabledCommands.includes(name)) return
                 }
                 return
             }
         });
       });
-    } else if(message.guild !== null){
-      // if no mongoURI set the default prefix
-      prefixes.set(message.guild.id, prefix)
     }
-    // check for ignoring bots
-    if(ignoreBots == true && message.author.bot) return
-    // destructure things from the message
-    const { member, content, guild } = message
+    const { member, guild } = interaction
     // check for valid testing and owneronly permissions
-    if(testOnly == true && !(testServers.includes(message.guild.id))) return 
-    if(ownerOnly == true && !(message.author.id == ownerId)) return 
-    // check each alias for the command
-    for (const alias of aliases) {
-      // register command template
-      const command = `${message.guild ? prefixes.get(message.guild.id) : prefix || prefix}${alias.toLowerCase()}`
-      // see if the command was called
+    if(testOnly == true && !(testServers.includes(guild.id))) return 
+    if(ownerOnly == true && !(member.id == ownerId)) return 
+    // check each name for the command
       if (
-        content.toLowerCase().startsWith(`${command} `) ||
-        content.toLowerCase() === command ||
-        content.toLowerCase().startsWith(`<@!${client.user.id}> ${alias}`)
+        interaction.commandName == name.toLowerCase()
       ) {
-        // check if mention prefix is disabled
-        if(disabledDefaults !== null && (content.toLowerCase().startsWith(`<@!${client.user.id}> ${alias}`)) && disabledDefaults.includes('mention-prefix')) return
-        // command is now ran
-        // spit arguments
-        const arguments = content.split(/[ ]+/)
-        // shift it again if it's a mention
-        if(
-          content.toLowerCase().startsWith(`<@!${client.user.id}> ${alias}`)
-        ) arguments.shift()
-
-        // shift the commands to get rid of command
-        arguments.shift()
         // check for required permissions
         for (const permission of permissions) {
           if ((member !== null && !member.hasPermission(permission)) || member == null) {
@@ -231,20 +170,6 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
             return
           }
         }
-
-        
-
-        // check for args length
-        if (
-          arguments.length < minArgs ||
-          (maxArgs !== null && arguments.length > maxArgs) &&
-          maxArgs !== -1
-        ) {
-          message.reply(
-            `Incorrect syntax! Use ${prefix}${alias} ${expectedArgs}`
-          )
-          return
-        }
         // check if this is a default command
         if(identifier !== null){
           const infoObj = {
@@ -275,36 +200,19 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
         } else {
           // this is a non-default command
           const infoObj = {
-            message: message,
-            args: arguments,
-            text: arguments.join(' '),
-            client: client,
-            prefix: prefixes.get(message.guild.id),
+            interaction
           }
           
           // handle the user's command
           try{
             callback(infoObj)
           } catch(e) {
-            const errorObj = {
-              message: message,
-              args: arguments,
-              text: arguments.join(' '),
-              client: client,
-              error: e,
-              command: {
-                _aliases: aliases,
-                _name: aliases[0],
-              },
-              errortype: "EXCEPTION"
-            }
-            error(errorObj)
+            console.log(e)
           }
         }
         
 
         return
       }
-    }
   })
 }

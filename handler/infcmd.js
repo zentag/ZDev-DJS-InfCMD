@@ -30,10 +30,13 @@ module.exports = {
                 if (stat.isDirectory()) {
                     readCommands(path.join(commandsDir, file))
                 } else if (file !== commandBaseFile) {
-                    // push name to userCommands
-                    userCommands.push(file.replace('.js', ''))
-                    // get option and send to command base
                     const option = require(path.join(__infcmdnewdirname, commandsDir, file))
+                    const { name, description } = option
+                    if(!name) return console.log(`InfCMD WARNING > Command ${file.replace(".js", "")} doesn't have required field "name"!`)
+                    if(!description) return console.log(`InfCMD WARNING > Command ${file.replace(".js", "")} doesn't have required field "description"!`)
+                    // push name to userCommands
+                    userCommands.push(name)
+                    // get option and send to command base
                     commandBase(client, option, file, clientOptions)
                 }
             }
@@ -95,10 +98,10 @@ module.exports = {
                     readCommands(path.join(commandsDir, file))
                 } else if (file !== commandBaseFile) {
                     let option = require(path.join(__infcmdnewdirname, commandsDir, file))
-                    if(option.aliases == undefined) {
-                        option.aliases = [file.replace(".js", "")]
-                    } else if(option.aliases[0] !== file.replace(".js", "")){
-                        option.aliases.push(file.replace(".js", ""))
+                    if(option.name == undefined) {
+                        option.name = [file.replace(".js", "")]
+                    } else if(option.name[0] !== file.replace(".js", "")){
+                        option.name.push(file.replace(".js", ""))
                     }
                     userCommands.push(option)
                 }
