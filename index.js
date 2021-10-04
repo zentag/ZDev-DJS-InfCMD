@@ -1,7 +1,8 @@
 const { init } = require('./handler/infcmd.js')
-const Discord = require('discord.js')
-const client = new Discord.Client()
+const { Client, Intents} = require('discord.js')
+const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 require('dotenv').config()
+
 
 client.on('ready', async () => {
   console.log('The client is ready!')
@@ -9,9 +10,9 @@ client.on('ready', async () => {
   init(client, {
       commandsDir: 'commands',
       featuresDir: 'features',
-      prefix: 'funny?',
       ownerId: '521115847801044993',
       testServers: ['811390529728020480'],
+      testing: false,
       mongoURI: process.env.mongoPath,
   })
 })

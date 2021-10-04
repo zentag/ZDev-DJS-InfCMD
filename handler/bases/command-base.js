@@ -1,6 +1,11 @@
 const mongo = require('../mongo.js')
 const settingsSchema = require('../schemas/settings.js')
+const { REST } = require('@discordjs/rest');
+const { Routes } = require('discord-api-types/v9');
+const { Permissions } = require('discord.js');
 const prefixes = new Map()
+
+const rest = new REST({ version: '9' }).setToken(process.env.token);
 
 const validatePermissions = (permissions) => {
   // All discord permissions
@@ -65,6 +70,7 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     testServers,
     ownerId,
     mongoURI = null,
+    testing = false,
     ignoreBots = false,
     disabledDefaults = null,
     defaultError = null,
@@ -86,15 +92,52 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
 
     validatePermissions(permissions)
   }
+  for(const option in options){
+    switch(options[option].type){
+      case "STRING":
+        options[option].type = 3
+        break;
+      case "INT":
+        options[option].type = 4
+        break;
+      case "USER":
+        options[option].type = 6
+        break;
+      case "ROLE":
+        options[option].type = 8
+        break;
+      case "SUB-CMD":
+        options[option].type = 1
+        break;
+      case "SUB-CMD-GROUP":
+        options[option].type = 2
+        break;
+      case "CHANNEL":
+        options[option].type = 7
+        break;
+      case "BOOL":
+        options[option].type = 5
+        break;
+      case "MENTIONABLE":
+        options[option].type = 9
+        break;
+      case "FLOAT":
+        options[option].type = 10
+        break;
+    }
+  }
 
-  const testguild = client.guilds.cache.get('811390529728020480');
-  const data = {
+  const data = [{
       name,
       description,
       options
+  }]
+  if(testing == true){ 
+    for(const server in testServers){
+      await rest.put(Routes.applicationGuildCommands(client.user.id, testServers[server]), { body: data },)
+    }
   }
-  
-  const command = await testguild.commands.create(data)
+  else await rest.put(Routes.applicationCommands(client.user.id), { body: data },)
   // make listener for messages
   client.on('interactionCreate', async (interaction) => {
     const passthroughObj = {
@@ -106,9 +149,9 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
     // set disabled to null every message
     let disabledCommands = null
     // check db
-    if(mongoURI && message.guild !== null){
+    if(mongoURI && interaction.guild !== null){
       await mongo(mongoURI).then(async (mongoose) => {
-        const result = settingsSchema.findOne({ guildId: message.guild.id }, function (err, docs) {
+        const result = settingsSchema.findOne({ guildId: interaction.guild.id }, function (err, docs) {
             if (err){
                 console.log(err)
             }
@@ -133,8 +176,115 @@ module.exports = async (client, commandOptions, file, clientOptions, userCommand
         interaction.commandName == name.toLowerCase()
       ) {
         // check for required permissions
-        for (const permission of permissions) {
-          if ((member !== null && !member.hasPermission(permission)) || member == null) {
+        for (let permission of permissions) {
+          switch(permission){
+            case 'CREATE_INSTANT_INVITE':
+              permission = Permissions.FLAGS.CREATE_INSTANT_INVITE
+              break;
+            case 'KICK_MEMBERS':
+              permission = Permissions.FLAGS.KICK_MEMBERS
+              break;
+            case 'BAN_MEMBERS':
+              permission = Permissions.FLAGS.BAN_MEMBERS
+              break;
+            case 'ADMINISTRATOR':
+              permission = Permissions.FLAGS.ADMINISTRATOR
+              break;
+            case 'MANAGE_CHANNELS':
+              permission = Permissions.FLAGS.MANAGE_CHANNELS
+              break;
+            case 'MANAGE_GUILD':
+              permission = Permissions.FLAGS.MANAGE_GUILD
+              break;
+            case 'ADD_REACTIONS':
+              permission = Permissions.FLAGS.ADD_REACTIONS
+              break;
+            case 'VIEW_AUDIT_LOG':
+              permission = Permissions.FLAGS.VIEW_AUDIT_LOG
+              break;
+            case 'PRIORITY_SPEAKER':
+              permission = Permissions.FLAGS.PRIORITY_SPEAKER
+              break;
+            case 'STREAM':
+              permission = Permissions.FLAGS.STREAM
+              break;
+            case 'VIEW_CHANNEL':
+              permission = Permissions.FLAGS.VIEW_CHANNEL
+              break;
+            case 'SEND_MESSAGES':
+              permission = Permissions.FLAGS.SEND_MESSAGES
+              break;
+            case 'SEND_TTS_MESSAGES':
+              permission = Permissions.FLAGS.SEND_TTS_MESSAGES
+              break;
+            case 'MANAGE_MESSAGES':
+              permission = Permissions.FLAGS.MANAGE_MESSAGES
+              break;
+            case 'EMBED_LINKS':
+              permission = Permissions.FLAGS.EMBED_LINKS
+              break;
+            case 'ATTACH_FILES':
+              permission = Permissions.FLAGS.ATTACH_FILES
+              break;
+            case 'READ_MESSAGE_HISTORY':
+              permission = Permissions.FLAGS.READ_MESSAGE_HISTORY
+              break;
+            case 'MENTION_EVERYONE':
+              permission = Permissions.FLAGS.MENTION_EVERYONE
+              break;
+            case 'USE_EXTERNAL_EMOJIS':
+              permission = Permissions.FLAGS.USE_EXTERNAL_EMOJIS
+              break;
+            case 'VIEW_GUILD_INSIGHTS':
+              permission = Permissions.FLAGS.VIEW_GUILD_INSIGHTS
+              break;
+            case 'CONNECT':
+              permission = Permissions.FLAGS.CONNECT
+              break;
+            case 'SPEAK':
+              permission = Permissions.FLAGS.SPEAK
+              break;
+            case 'MUTE_MEMBERS':
+              permission = Permissions.FLAGS.MUTE_MEMBERS
+              break;
+            case 'DEAFEN_MEMBERS':
+              permission = Permissions.FLAGS.DEAFEN_MEMBERS
+              break;
+            case 'MOVE_MEMBERS':
+              permission = Permissions.FLAGS.MOVE_MEMBERS
+              break;
+            case 'USE_VAD':
+              permission = Permissions.FLAGS.USE_VAD
+              break;
+            case 'CHANGE_NICKNAME':
+              permission = Permissions.FLAGS.CHANGE_NICKNAME
+              break;
+            case 'MANAGE_NICKNAMES':
+              permission = Permissions.FLAGS.MANAGE_NICKNAMES
+              break;
+            case 'MANAGE_ROLES':
+              permission = Permissions.FLAGS.MANAGE_ROLES
+              break;
+            case 'MANAGE_WEBHOOKS':
+              permission = Permissions.FLAGS.MANAGE_WEBHOOKS
+              break;
+            case 'MANAGE_EMOJIS_AND_STICKERS':
+              permission = Permissions.FLAGS.MANAGE_EMOJIS_AND_STICKERS
+              break;
+            case 'USE_EXTERNAL_STICKERS':
+              permission = Permissions.FLAGS.USE_EXTERNAL_STICKERS
+              break;
+            case 'MANAGE_THREADS':
+              permission = Permissions.FLAGS.MANAGE_THREADS
+              break;
+            case 'USE_PUBLIC_THREADS':
+              permission = Permissions.FLAGS.USE_PUBLIC_THREADS
+              break;
+            case 'USE_PRIVATE_THREADS':
+              permission = Permissions.FLAGS.USE_PRIVATE_THREADS
+              break;
+          }
+          if ((member !== null && !member.permissions.has([permission])) || member == null) {
             const errorObj = {
               message: message,
               args: arguments,

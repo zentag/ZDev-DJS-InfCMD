@@ -47,7 +47,7 @@ module.exports = {
             for (const file of files) {
                 const stat = fs.lstatSync(path.join(__dirname, defaultDir, file))
                 if (stat.isDirectory()) {
-                    readCommands(path.join(defaultDir, file))
+                    readDefaultCommands(path.join(defaultDir, file))
                 } else if (file !== commandBaseFile) {
                     let name = file.replace('.js', '')
                     if(disabledDefaults && disabledDefaults.includes(name)) return console.log(`InfCMD > The "${name}" default command disabled due to being disabled`)
